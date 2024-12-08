@@ -15,9 +15,9 @@ rec {
       seconds-per-day = 86400;
       day-of-epoch = timestamp / seconds-per-day;
       seconds-of-day = remainder timestamp seconds-per-day;
-      hours = seconds-of-day / 3600;
-      minutes = (remainder seconds-of-day 3600) / 60;
-      seconds = remainder timestamp 60;
+      hour = seconds-of-day / 3600;
+      minute = (remainder seconds-of-day 3600) / 60;
+      second = remainder timestamp 60;
 
       day' = day-of-epoch + 719468; # internal representation of days, based on number of days between 0000-03-01 and 1970-01-01
       era =
@@ -39,9 +39,9 @@ rec {
         year
         month
         day
-        hours
-        minutes
-        seconds
+        hour
+        minute
+        second
         ;
     };
 
@@ -62,7 +62,7 @@ rec {
     with builtins.mapAttrs (name: n: if name == "year" then pad 4 "0" n else pad 2 "0" n) (
       datetime-from-timestamp timestamp
     );
-    "${year}${month}${day}${hours}${minutes}${seconds}";
+    "${year}${month}${day}${hour}${minute}${second}";
 
   /**
     Polyfill for the experimental `builtins.fetchTree`
