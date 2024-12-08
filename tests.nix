@@ -14,17 +14,17 @@ in
         year = 2024;
         month = 12;
         day = 8;
-        hours = 1;
-        minutes = 2;
-        seconds = 56;
+        hour = 1;
+        minute = 2;
+        second = 56;
       }
       {
         year = 1970;
         month = 1;
         day = 1;
-        hours = 0;
-        minutes = 0;
-        seconds = 0;
+        hour = 0;
+        minute = 0;
+        second = 0;
       }
     ];
   };

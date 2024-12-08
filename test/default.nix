@@ -13,5 +13,8 @@
   inherit inputs system pkgs;
   flake.packages = {
     inherit (pkgs) cowsay lolcat;
+    flake-inputs = pkgs.runCommand "flake-inputs" { } ''
+      cp ${inputs.flake-inputs}/lib.nix $out
+    '';
   };
 }

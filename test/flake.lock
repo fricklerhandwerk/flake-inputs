@@ -3,11 +3,11 @@
     "flake-inputs": {
       "flake": false,
       "locked": {
-        "lastModified": 1733675799,
-        "narHash": "sha256-calMWCE6IACYnDokAxk4n+jD40i8XeqS9db9XcMajQg=",
+        "lastModified": 1733676964,
+        "narHash": "sha256-ph9T0XFfTXTYimqcbFQUHSKH3qDq462t279t0c2tcD0=",
         "owner": "fricklerhandwerk",
         "repo": "flake-inputs",
-        "rev": "d2ede900f6eb074547f5773946b3b9f78f9b5d47",
+        "rev": "559574c9cbb8af262f3944b67d60fbf0f6ad03c3",
         "type": "github"
       },
       "original": {
