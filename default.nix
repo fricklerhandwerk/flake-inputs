@@ -7,16 +7,15 @@
     overlays = [ ];
   },
 }:
-let
-  lib = import ./lib.nix;
-in
 pkgs.mkShellNoCC {
   packages = with pkgs; [ nix-unit ];
   shellHook = ''
     set -e
     trap 'rm -f lib.nix' EXIT
     nix flake update --flake ${toString ./test}
-    cp $(nix-instantiate --eval -E '"${(import ./test { }).inputs.flake-inputs}"' | tr -d '"')/lib.nix .
+    cp $(nix-instantiate --eval -E '"${
+      (import ./test { }).inputs.flake-inputs
+    }"' --tarball-ttl 0 | tr -d '"')/lib.nix .
     timestamp=$(nix-instantiate --eval -E '(import ./lib.nix).format-timestamp ${toString builtins.currentTime}' | tr -d '"')
     [ $(date -u -d @${toString builtins.currentTime} '+%Y%m%d%H%M%S') = $timestamp ]
     nix-unit ${toString ./tests.nix}
