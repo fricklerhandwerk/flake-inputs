@@ -246,14 +246,16 @@ rec {
       ) lockFile.nodes;
     in
     if lockFile.version >= 5 && lockFile.version <= 7 then
-      allNodes.${lockFile.root}
+      allNodes.${lockFile.root}.inputs
       // {
-        overrideInputs =
-          ov:
-          flake-inputs {
-            inherit root;
-            overrides = ov;
-          };
+        self = allNodes.${lockFile.root} // {
+          overrideInputs =
+            ov:
+            flake-inputs {
+              inherit root;
+              overrides = ov;
+            };
+        };
       }
     else
       throw "flake-inputs: lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";

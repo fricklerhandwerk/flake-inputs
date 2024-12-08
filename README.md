@@ -7,9 +7,9 @@ A helper to use remote references from `flake.lock` in stable Nix.
 ```
 # default.nix
 {
-  inputs ? (import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/main") {
+  inputs ? import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/main") {
     root = ./.;
-  }).inputs,
+  },
   system ? builtins.currentSystem,
   pkgs ? import inputs.nixpkgs {
     inherit system;
