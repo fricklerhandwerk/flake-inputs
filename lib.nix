@@ -73,12 +73,13 @@ rec {
     info:
     if info.type == "github" then
       {
-        outPath = fetchTarball (
-          {
-            url = "https://api.${info.host or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
-          }
-          // (if info ? narHash then { sha256 = info.narHash; } else { })
-        );
+        outPath =
+          let
+            args = {
+              url = "https://api.${info.host or "github.com"}/repos/${info.owner}/${info.repo}/tarball/${info.rev}";
+            } // (if info ? narHash then { sha256 = info.narHash; } else { });
+          in
+          builtins.trace (builtins.toJSON args) (fetchTarball args);
         rev = info.rev;
         shortRev = builtins.substring 0 7 info.rev;
         lastModified = info.lastModified;
