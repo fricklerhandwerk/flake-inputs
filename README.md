@@ -1,24 +1,26 @@
 # `flake-inputs`
 
-A helper to use remote references from `flake.lock` in stable Nix.
+A helper to use remote source references from `flake.lock` in stable Nix.
 
 # Example
 
 ```
 # default.nix
 {
-  inputs ? import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/main") {
+  inputs ? import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/1.0") {
     root = ./.;
   },
   system ? builtins.currentSystem,
-  pkgs ? import inputs.nixpkgs {
+  nixpkgs-config ? {
     inherit system;
     config = { };
     overlays = [ ];
   },
 }:
+let
+  pkgs = import inputs.nixpkgs nixpkgs-config;
+in
 {
-  inherit inputs system pkgs;
   flake.packages = {
     inherit (pkgs) cowsay lolcat;
   };
@@ -28,8 +30,6 @@ A helper to use remote references from `flake.lock` in stable Nix.
 ```nix
 # flake.nix
 {
-  inputs.flake-inputs.url = "github:fricklerhandwerk/flake-inputs";
-  inputs.flake-inputs.flake = false;
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
