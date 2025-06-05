@@ -259,4 +259,20 @@ rec {
       }
     else
       throw "flake-inputs: lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
+
+  /**
+    Import a flake from stable Nix.
+  */
+  import-flake =
+    flake:
+    let
+      lock = flake-inputs { root = flake; };
+      inputs =
+        with builtins;
+        mapAttrs (n: v: (import-flake v) // lock.${n}) (
+          if (pathExists "${flake}/flake.lock") then lock else { }
+        );
+      self = (import "${flake}/flake.nix").outputs (inputs // { inherit self; });
+    in
+    self;
 }

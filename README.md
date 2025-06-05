@@ -2,30 +2,40 @@
 
 A helper to use remote source references from `flake.lock` in stable Nix.
 
-# Example
+## Use cases
+
+- Separately managing development dependencies to reduce closure sizse for flake consumers
+- Gradually migrating away from flakes
+- Offering a first-class experience for users of stable Nix
+
+## Using sources from `flake.lock` in `default.nix`
+
+In `default.nix` obtain the `flake-inputs` library and use sources `flake.lock`:
 
 ```
 # default.nix
-{
-  inputs ? import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/1.0") {
-    root = ./.;
-  },
-  system ? builtins.currentSystem,
-  nixpkgs-config ? {
-    inherit system;
-    config = { };
-    overlays = [ ];
-  },
-}:
 let
-  pkgs = import inputs.nixpkgs nixpkgs-config;
+  inputs = import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/1.1") {
+    root = ./.;
+  };
 in
 {
-  flake.packages = {
+  system ? builtins.currentSystem,
+  config ? { },
+  overlays ? [ ],
+  ...
+}@args:
+let
+  pkgs = import inputs.nixpkgs ({ inherit system config overlays; } // args);
+in
+{
+  packages = {
     inherit (pkgs) cowsay lolcat;
   };
 }
 ```
+
+In `flake.nix` use attributes from `default.nix` for `outputs`:
 
 ```nix
 # flake.nix
@@ -37,11 +47,44 @@ in
     { flake-utils, ... }@inputs:
     flake-utils.lib.eachDefaultSystem (
       system:
-      let
-        default = import ./default.nix { inherit inputs system; };
-      in
-      default.flake
+      import ./default.nix { inherit system; };
     );
 }
 ```
 
+Keep using the `inputs` attribute to specify sources, and `nix flake update` to pull the latest versions.
+
+# Importing flakes
+
+Obtain `flake-inputs` and some arbitrary project that is very inconvenient to evaluate from stable Nix:
+
+```bash
+nix-shell -p npins --run "
+npins init --bare
+npins add github fricklerhandwerk flake-inputs --at 1.1
+npins add github nixos nix --branch 2.29-maintenance
+"
+```
+
+In `default.nix` import the flake with `import-flake` from the `flake-inputs` library:
+
+```
+# default.nix
+let
+  sources = import ./npins;
+in
+{
+  flake-inputs ? sources.flake-inputs,
+  nix ? sources.nix,
+}:
+let
+  inherit (import "${flake-inputs}/lib.nix") import-flake;
+in
+(import-flake nix).packages.${builtins.currentSystem}.default
+```
+
+Realise the derivation from a substituter to demonstrate that it works as intended:
+
+```bash
+nix-build --no-out-link
+```
