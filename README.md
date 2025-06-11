@@ -2,6 +2,8 @@
 
 A helper to use remote source references from `flake.lock` in stable Nix.
 
+Modified from [nix-community/dream2nix](https://github.com/nix-community/dream2nix/blob/main/dev-flake/flake-compat.nix) since neither [nix-community/flake-compat](https://github.com/nix-community/flake-compat) nor [edolstra/flake-compat](https://github.com/edolstra/flake-compat) are actively maintained.
+
 ## Use cases
 
 - Separately managing development dependencies to reduce closure sizse for flake consumers
