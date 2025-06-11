@@ -121,6 +121,7 @@ rec {
               "${info.root}/${info.path}"
             else
               info.path;
+          sha256 = info.narHash;
         };
         narHash = info.narHash;
       }
