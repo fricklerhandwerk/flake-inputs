@@ -1,1 +1,1 @@
-(import ./lib.nix).flake-inputs
+(import ./lib.nix).import-flake

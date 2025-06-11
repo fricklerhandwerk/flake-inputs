@@ -94,11 +94,13 @@ rec {
             allRefs = true;
           }
           // (if info ? rev then { inherit (info) rev; } else { })
+          // (if info ? ref then { inherit (info) ref; } else { })
           // (if info ? submodules then { inherit (info) submodules; } else { })
         );
         lastModified = info.lastModified;
         lastModifiedDate = format-timestamp info.lastModified;
         narHash = info.narHash;
+        revCount = info.revCount or 0;
       }
       // (
         if info ? rev then
@@ -115,10 +117,10 @@ rec {
           path =
             if
               builtins.substring 0 1 info.path != "/"
-            # XXX: Relative paths require an additional `root` attribute!
-            #      This is supplied when being called by our own flake-inputs, but may not work elsewhere
+            # XXX: Relative paths require an additional `src` attribute!
+            #      This is supplied when being called by our own `import-flake`, but may not work elsewhere
             then
-              "${info.root}/${info.path}"
+              "${info.src}/${info.path}"
             else
               info.path;
           sha256 = info.narHash;
@@ -142,24 +144,35 @@ rec {
         );
         shortRev = builtins.substring 0 7 info.rev;
       }
+    else if info.type == "sourcehut" then
+      {
+        inherit (info) rev narHash lastModified;
+        outPath = fetchTarball (
+          {
+            url = "https://${info.host or "git.sr.ht"}/${info.owner}/${info.repo}/archive/${info.rev}.tar.gz";
+          }
+          // (if info ? narHash then { sha256 = info.narHash; } else { })
+        );
+        shortRev = builtins.substring 0 7 info.rev;
+      }
     # TODO: Mercurial, tarball inputs, ...
     else
       throw "flake input has unsupported input type '${info.type}'";
 
   /**
-    Compatibility layer to allow `flake.lock` files to be used with stable Nix.
+    Import a flake from stable Nix.
 
     Modified from https://github.com/nix-community/dream2nix/blob/main/dev-flake/flake-compat.nix
     since neither https://github.com/nix-community/flake-compat nor https://github.com/edolstra/flake-compat
     are actively maintained.
   */
-  flake-inputs =
+  import-flake =
     {
-      root,
+      src,
       overrides ? { },
     }:
     let
-      lockFilePath = root + "/flake.lock";
+      lockFilePath = src + "/flake.lock";
       lockFile = builtins.fromJSON (builtins.readFile lockFilePath);
 
       # We can't import those from the Nixpkgs `lib`,
@@ -186,14 +199,14 @@ rec {
             else
               { outPath = src; };
           # Git worktrees have a file for .git, so we don't check the type of .git
-          isGit = builtins.pathExists (root + "/.git");
-          isShallow = builtins.pathExists (root + "/.git/shallow");
+          isGit = builtins.pathExists (src + "/.git");
+          isShallow = builtins.pathExists (src + "/.git/shallow");
         in
         {
           lastModified = 0;
           lastModifiedDate = format-timestamp 0;
         }
-        // (if root ? outPath then root else tryFetchGit root);
+        // (if src ? outPath then src else tryFetchGit src);
 
       rootOverrides = mapAttrs' (
         input: lockKey':
@@ -213,10 +226,17 @@ rec {
               {
                 type = "path";
                 outPath = rootOverrides.${key};
-                narHash = throw "flake-inputs: overriding narHash not implemented";
+                narHash = throw "import-flake: overriding narHash not implemented";
               }
             else
-              fetchTree (node.info or { } // removeAttrs node.locked [ "dir" ] // { inherit root; });
+              fetchTree (node.info or { } // removeAttrs node.locked [ "dir" ] // { inherit src; });
+
+          subdir = if key == lockFile.root then "" else node.locked.dir or "";
+
+          # extra parenthesis so we build a string context only only once
+          outPath = sourceInfo + ((if subdir == "" then "" else "/") + subdir);
+
+          flake = import (outPath + "/flake.nix");
 
           inputs = builtins.mapAttrs (_inputName: inputSpec: allNodes.${resolveInput inputSpec}) (
             node.inputs or { }
@@ -237,43 +257,65 @@ rec {
                 # Since this could be a 'follows' input, call resolveInput.
                 (resolveInput lockFile.nodes.${nodeName}.inputs.${builtins.head path})
                 (builtins.tail path);
+
+          outputs = flake.outputs (inputs // { self = result; });
+
+          result =
+            outputs
+            # `sourceInfo.outPath` does not necessarily match the `outPath` of the flake,
+            # as the flake may be in a subdirectory of a source.
+            # This is shadowed in the next `//`.
+            // sourceInfo
+            // {
+              # This shadows `sourceInfo.outPath`.
+              inherit outPath;
+              inherit inputs;
+              inherit outputs;
+              inherit sourceInfo;
+              _type = "flake";
+            };
         in
-        sourceInfo
-        // {
-          inherit inputs;
-          inherit sourceInfo;
-          _type = "flake";
-        }
+        if node.flake or true then
+          assert builtins.isFunction flake.outputs;
+          result
+        else
+          sourceInfo
       ) lockFile.nodes;
+
+      callLocklessFlake =
+        sourceInfo:
+        let
+          flake = import (sourceInfo + "/flake.nix");
+          outputs = sourceInfo // (flake.outputs ({ self = outputs; }));
+        in
+        outputs;
     in
-    if lockFile.version >= 5 && lockFile.version <= 7 then
-      allNodes.${lockFile.root}.inputs
+    if !(builtins.pathExists lockFilePath) then
+      callLocklessFlake tree
+    else if lockFile.version >= 5 && lockFile.version <= 7 then
+      allNodes.${lockFile.root}
       // {
         self = allNodes.${lockFile.root} // {
           overrideInputs =
             ov:
-            flake-inputs {
-              inherit root;
+            import-flake {
+              inherit src;
               overrides = ov;
             };
         };
       }
     else
-      throw "flake-inputs: lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
+      throw "import-flake: lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
 
   /**
-    Import a flake from stable Nix.
+    Polyfill for the experimental `builtins.getFlake`
+
+    https://nix.dev/manual/nix/latest/language/builtins#builtins-getFlake
   */
-  import-flake =
-    flake:
-    let
-      lock = flake-inputs { root = flake; };
-      inputs =
-        with builtins;
-        mapAttrs (n: v: (import-flake v) // lock.${n}) (
-          if (pathExists "${flake}/flake.lock") then lock else { }
-        );
-      self = (import "${flake}/flake.nix").outputs (inputs // { inherit self; });
-    in
-    self;
+  getFlake = info: import-flake { src = fetchTree info; };
+
+  /**
+    Load a flake like `:lf` in `nix repl`
+  */
+  load-flake = flake: (import-flake { src = flake; }).self.outputs;
 }

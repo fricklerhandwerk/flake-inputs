@@ -1,12 +1,12 @@
 # `flake-inputs`
 
-A helper to use remote source references from `flake.lock` in stable Nix.
+A helper to use flakes from stable Nix.
 
 Modified from [nix-community/dream2nix](https://github.com/nix-community/dream2nix/blob/main/dev-flake/flake-compat.nix) since neither [nix-community/flake-compat](https://github.com/nix-community/flake-compat) nor [edolstra/flake-compat](https://github.com/edolstra/flake-compat) are actively maintained.
 
 ## Use cases
 
-- Separately managing development dependencies to reduce closure sizse for flake consumers
+- Separately managing development dependencies to reduce closure size for flake consumers
 - Gradually migrating away from flakes
 - Offering a first-class experience for users of stable Nix
 
@@ -17,8 +17,8 @@ In `default.nix` obtain the `flake-inputs` library and use sources `flake.lock`:
 ```
 # default.nix
 let
-  inputs = import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/1.1") {
-    root = ./.;
+  inputs = import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/2.0") {
+    src = ./.;
   };
 in
 {
@@ -63,12 +63,12 @@ Obtain `flake-inputs` and some arbitrary project that is very inconvenient to ev
 ```bash
 nix-shell -p npins --run "
 npins init --bare
-npins add github fricklerhandwerk flake-inputs --at 1.1
+npins add github fricklerhandwerk flake-inputs --at 2.0
 npins add github nixos nix --branch 2.29-maintenance
 "
 ```
 
-In `default.nix` import the flake with `import-flake` from the `flake-inputs` library:
+In `default.nix` import the flake with `load-flake` from the `flake-inputs` library:
 
 ```
 # default.nix
@@ -80,9 +80,9 @@ in
   nix ? sources.nix,
 }:
 let
-  inherit (import "${flake-inputs}/lib.nix") import-flake;
+  inherit (import "${flake-inputs}/lib.nix") load-flake;
 in
-(import-flake nix).packages.${builtins.currentSystem}.default
+(load-flake nix).packages.${builtins.currentSystem}.default
 ```
 
 Realise the derivation from a substituter to demonstrate that it works as intended:
