@@ -284,30 +284,36 @@ rec {
           sourceInfo
       ) lockFile.nodes;
 
-      callLocklessFlake =
-        sourceInfo:
-        let
-          flake = import (sourceInfo + "/flake.nix");
-          outputs = sourceInfo // (flake.outputs ({ self = outputs; }));
-        in
-        outputs;
+      result =
+        if !(builtins.pathExists lockFilePath) then
+          let
+            flake = import (tree + "/flake.nix");
+            outputs = flake.outputs { self = result; };
+            result =
+              tree
+              // {
+                inherit outputs;
+                inputs = { };
+                _type = "flake";
+                sourceInfo = tree;
+              }
+              // outputs;
+          in
+          result
+        else if lockFile.version >= 5 && lockFile.version <= 7 then
+          allNodes.${lockFile.root} // { self = allNodes.${lockFile.root}; }
+        else
+          throw "import-flake: lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
     in
-    if !(builtins.pathExists lockFilePath) then
-      callLocklessFlake tree
-    else if lockFile.version >= 5 && lockFile.version <= 7 then
-      allNodes.${lockFile.root}
-      // {
-        self = allNodes.${lockFile.root} // {
-          overrideInputs =
-            ov:
-            import-flake {
-              inherit src;
-              overrides = ov;
-            };
+    result
+    // {
+      overrideInputs =
+        ov:
+        import-flake {
+          inherit src;
+          overrides = ov;
         };
-      }
-    else
-      throw "import-flake: lock file '${lockFilePath}' has unsupported version ${toString lockFile.version}";
+    };
 
   /**
     Polyfill for the experimental `builtins.getFlake`
