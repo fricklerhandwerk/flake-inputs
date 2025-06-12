@@ -2,7 +2,19 @@
 
 A helper to use flakes from stable Nix.
 
-Modified from [nix-community/dream2nix](https://github.com/nix-community/dream2nix/blob/main/dev-flake/flake-compat.nix) since neither [nix-community/flake-compat](https://github.com/nix-community/flake-compat) nor [edolstra/flake-compat](https://github.com/edolstra/flake-compat) are actively maintained.
+Based on original work in
+
+- [edolstra/flake-compat](https://github.com/edolstra/flake-compat)
+- [nix-community/flake-compat](https://github.com/nix-community/flake-compat)
+- [nix-community/dream2nix](https://github.com/nix-community/dream2nix/blob/main/dev-flake/flake-compat.nix)
+
+since none of those seem to be actively maintained.
+
+This library also exposes:
+- `fetchTree`: Polyfill for the experimental [`builtins.fetchTree`](https://nix.dev/manual/nix/latest/language/builtins#builtins-fetchTree)
+- `getFlake`: Polyfill for the experimental [`builtins.getFlake`](https://nix.dev/manual/nix/latest/language/builtins#builtins-getFlake)
+- `datetime-from-timestamp`: A converter from Unix timestamps to Gregorian date and time, ported from Howard Hinnant's [`chrono`-Compatible Low-Level Date Algorithms](http://howardhinnant.github.io/date_algorithms.html)
+- `pad`: The legendary `pad` function
 
 ## Use cases
 
@@ -17,7 +29,10 @@ In `default.nix` obtain the `flake-inputs` library and use sources `flake.lock`:
 ```
 # default.nix
 let
-  inputs = import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/3.0") {
+  inherit (import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/4.0"))
+    import-flake
+    ;
+  inputs = import-flake {
     src = ./.;
   };
 in
@@ -63,7 +78,7 @@ Obtain `flake-inputs` and some arbitrary project that is very inconvenient to ev
 ```bash
 nix-shell -p npins --run "
 npins init --bare
-npins add github fricklerhandwerk flake-inputs --at 3.0
+npins add github fricklerhandwerk flake-inputs --at 4.0
 npins add github nixos nix --branch 2.29-maintenance
 "
 ```
@@ -80,7 +95,7 @@ in
   nix ? sources.nix,
 }:
 let
-  inherit (import "${flake-inputs}/lib.nix") load-flake;
+  inherit (import flake-inputs) load-flake;
 in
 (load-flake nix).packages.${builtins.currentSystem}.default
 ```
