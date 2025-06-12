@@ -46,7 +46,9 @@ rec {
     };
 
   /**
-    Pad an `integer` with the given `fill` character to the desired `length`.
+    Pad a string-coercible `input` with the given `fill` character to the desired `length`.
+
+    The string length of `input` must be at most `length`.
   */
   pad =
     length: fill: integer:
@@ -54,6 +56,8 @@ rec {
       str = toString integer;
     in
     with builtins;
+    assert stringLength str <= length;
+    assert stringLength fill == 1;
     concatStringsSep "" (genList (_: fill) (length - stringLength str)) + str;
 
   # Format number of seconds in the Unix epoch as %Y%m%d%H%M%S.

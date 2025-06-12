@@ -17,7 +17,7 @@ In `default.nix` obtain the `flake-inputs` library and use sources `flake.lock`:
 ```
 # default.nix
 let
-  inputs = import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/2.0") {
+  inputs = import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/3.0") {
     src = ./.;
   };
 in
@@ -63,7 +63,7 @@ Obtain `flake-inputs` and some arbitrary project that is very inconvenient to ev
 ```bash
 nix-shell -p npins --run "
 npins init --bare
-npins add github fricklerhandwerk flake-inputs --at 2.0
+npins add github fricklerhandwerk flake-inputs --at 3.0
 npins add github nixos nix --branch 2.29-maintenance
 "
 ```
