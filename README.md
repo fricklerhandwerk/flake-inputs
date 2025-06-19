@@ -32,9 +32,9 @@ let
   inherit (import (fetchTarball "https://github.com/fricklerhandwerk/flake-inputs/tarball/4.0"))
     import-flake
     ;
-  inputs = import-flake {
+  inherit (import-flake {
     src = ./.;
-  };
+  }) inputs;
 in
 {
   system ? builtins.currentSystem,
